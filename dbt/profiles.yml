@@ -1,0 +1,12 @@
+clickstream_etl:
+  target: dev
+  outputs:
+    dev:
+      type: cratedb
+      host: "{{ env_var('CRATE_URL', env_var('CRATEDB_HOST', 'http://localhost:4200')) }}"
+      username: "{{ env_var('CRATE_USERNAME', env_var('CRATEDB_USERNAME', 'admin')) }}"
+      password: "{{ env_var('CRATE_PASSWORD', env_var('CRATEDB_PASSWORD')) }}"
+      schema: "{{ env_var('DBT_SCHEMA', 'analytics') }}"
+      verify_ssl_cert: true
+      threads: 1
+      timeout: 30

@@ -1,0 +1,20 @@
+version: 2
+
+models:
+  - name: silver_clickstream_events
+    columns:
+      - name: event_id
+        tests:
+          - not_null
+          - unique
+      - name: event_ts
+        tests:
+          - not_null
+      - name: url_id
+        tests:
+          - not_null
+      - name: country
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['US', 'IN', 'GB', 'DE', 'FR', 'CA', 'AU', 'JP', 'BR', 'NG', 'ZA', 'BD', 'NZ', 'AE', 'ID']

@@ -1,0 +1,17 @@
+version: 2
+
+models:
+  - name: gold_url_daily_metrics
+    columns:
+      - name: event_date
+        tests:
+          - not_null
+      - name: url_id
+        tests:
+          - not_null
+      - name: country
+        tests:
+          - not_null
+      - name: click_count
+        tests:
+          - not_null

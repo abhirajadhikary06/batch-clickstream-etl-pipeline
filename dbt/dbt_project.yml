@@ -1,0 +1,19 @@
+name: clickstream_etl
+version: 1.0.0
+config-version: 2
+profile: clickstream_etl
+
+model-paths:
+  - models
+
+models:
+  clickstream_etl:
+    staging:
+      +materialized: view
+      +schema: staging
+    silver:
+      +materialized: incremental
+      +schema: silver
+    gold:
+      +materialized: table
+      +schema: gold

@@ -1,0 +1,8 @@
+version: 2
+
+sources:
+  - name: bronze_raw
+    schema: raw
+    tables:
+      - name: clickstream_events
+        description: Raw clickstream events loaded into CrateDB from Bronze parquet batches.

@@ -5,6 +5,6 @@ from orchestration.dagster_project.jobs.clickstream_pipeline_job import clickstr
 
 every_30_min_schedule = ScheduleDefinition(
     job=clickstream_pipeline_job,
-    cron_schedule="*/30 * * * *",
+    cron_schedule="*/5 * * * *",
     execution_timezone="UTC",
 )
