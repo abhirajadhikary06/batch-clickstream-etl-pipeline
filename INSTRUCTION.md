@@ -103,17 +103,6 @@ The system is designed to simulate real-world production data engineering workfl
                         │
                         ▼
         ┌──────────────────────────────────────────────────────┐
-        │ Trino (Query Engine Layer)                         │
-        │                                                      │
-        │ Responsibilities:                                  │
-        │ - executes SQL queries                             │
-        │ - forwards queries to CrateDB                      │
-        │ - query optimization                              │
-        │ - abstraction layer for BI tools                  │
-        └───────────────┬──────────────────────────────────────┘
-                        │
-                        ▼
-        ┌──────────────────────────────────────────────────────┐
         │ Metabase (BI & Dashboard Layer)                    │
         │                                                      │
         │ Responsibilities:                                  │

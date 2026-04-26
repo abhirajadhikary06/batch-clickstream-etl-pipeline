@@ -3,11 +3,16 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 
-from dagster import job, op
+from dagster import RetryPolicy, job, op
 
+from src.bi.metabase_client import (
+    trigger_dashboard_refresh as trigger_dashboard_refresh_api,
+    validate_metabase_api as validate_metabase_api_health,
+)
 from src.ingestion.fetch_events import fetch_events_since
 from src.ingestion.watermark_store import WatermarkStore
 from src.lakehouse.bronze_writer import write_bronze_batch
+from src.observability.openobserve_logger import log_pipeline_event
 from src.warehouse.crate_connection import smoke_test_crate_connection
 from src.warehouse.dbt_runner import run_dbt_command
 from src.warehouse.raw_loader import load_events_to_raw_clickstream
@@ -51,7 +56,7 @@ def load_raw_events_to_crate(batch: Dict[str, Any], crate_cluster: str) -> Dict[
     }
 
 
-@op
+@op(retry_policy=RetryPolicy(max_retries=1, delay=10), tags={"dagster/max_runtime": "300"})
 def run_dbt_staging_and_tests(batch: Dict[str, Any]) -> Dict[str, Any]:
     run_dbt_command(["run", "--select", "stg_clickstream_events"])
     run_dbt_command(["test", "--select", "stg_clickstream_events"])
@@ -70,6 +75,28 @@ def run_dbt_gold(batch: Dict[str, Any]) -> Dict[str, Any]:
     run_dbt_command(["run", "--select", "gold_url_daily_metrics"])
     run_dbt_command(["test", "--select", "gold_url_daily_metrics"])
     return batch
+
+
+@op(retry_policy=RetryPolicy(max_retries=2, delay=10), tags={"dagster/max_runtime": "180"})
+def validate_metabase_api(batch: Dict[str, Any]) -> Dict[str, Any]:
+    try:
+        result = validate_metabase_api_health()
+        log_pipeline_event("metabase_api", "success", {"result": result})
+        return batch
+    except Exception as exc:
+        log_pipeline_event("metabase_api", "error", {"error": str(exc)})
+        raise RuntimeError("Metabase API validation failed") from exc
+
+
+@op(retry_policy=RetryPolicy(max_retries=2, delay=10), tags={"dagster/max_runtime": "240"})
+def trigger_dashboard_refresh(batch: Dict[str, Any]) -> Dict[str, Any]:
+    try:
+        result = trigger_dashboard_refresh_api()
+        log_pipeline_event("metabase_refresh", "success", {"result": result})
+        return batch
+    except Exception as exc:
+        log_pipeline_event("metabase_refresh", "error", {"error": str(exc)})
+        raise RuntimeError("Metabase dashboard refresh failed") from exc
 
 
 @op
@@ -91,4 +118,6 @@ def clickstream_pipeline_job() -> None:
     staged_batch = run_dbt_staging_and_tests(loaded_batch)
     silver_batch = run_dbt_silver_and_tests(staged_batch)
     gold_batch = run_dbt_gold(silver_batch)
-    finalize_watermark(gold_batch)
+    metabase_validated_batch = validate_metabase_api(gold_batch)
+    metabase_refreshed_batch = trigger_dashboard_refresh(metabase_validated_batch)
+    finalize_watermark(metabase_refreshed_batch)

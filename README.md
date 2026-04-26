@@ -120,3 +120,51 @@ Place these in `.env` at the repository root:
 - The Bronze layer remains parquet-based in `data/bronze/`.
 - Dagster is the orchestration entry point and already schedules the ingestion job.
 - CrateDB is treated as the cloud warehouse layer.
+
+## Metabase BI Extension
+
+This repository now includes:
+
+- Metabase API hooks in `src/bi/metabase_client.py`
+- OpenObserve event hook in `src/observability/openobserve_logger.py`
+- Extended Dagster flow to run after gold:
+  - `validate_metabase_api`
+  - `trigger_dashboard_refresh`
+
+### Docker Compose (Metabase)
+
+Start local Metabase:
+
+```powershell
+docker compose up -d
+```
+
+Files added:
+
+- `docker-compose.yml`
+
+### Environment setup
+
+Use `.env.example` as template and configure:
+
+- `METABASE_*` variables for dashboard API integration
+- `OPENOBSERVE_*` variables for optional observability sink
+
+Feature toggles:
+
+- `METABASE_ENABLED=true` (Metabase is mandatory for BI in this pipeline)
+
+Default local ports:
+
+- Dagster: `3000`
+- Metabase: `3001`
+
+### Run full orchestration
+
+```powershell
+dagster job execute -f orchestration/dagster_project/repository.py -d . -j clickstream_pipeline_job
+```
+
+Production schedule is set back to every 30 minutes in:
+
+- `orchestration/dagster_project/schedules/every_30_min_schedule.py`
