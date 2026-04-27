@@ -21,6 +21,43 @@ from src.warehouse.raw_loader import load_events_to_raw_clickstream
 from src.warehouse.supabase_sync import sync_gold_metrics_to_supabase
 
 
+@op
+def start_pipeline_observability(context) -> None:
+    """Emit pipeline start event to observability backend."""
+    stage = "pipeline_start"
+    try:
+        emit_stage_telemetry(context, stage, "start")
+        log_stage_event(
+            stage=stage,
+            status="start",
+            op_name=context.op.name,
+            job_name=context.job_name,
+            run_id=context.run_id,
+            details={"trigger": "scheduled"},
+        )
+    except Exception as exc:
+        context.log.warning("Failed to emit pipeline start observability: %s", exc)
+
+
+@op
+def end_pipeline_observability(context, _final_result: str) -> str:
+    """Emit pipeline completion event to observability backend."""
+    stage = "pipeline_complete"
+    try:
+        emit_stage_telemetry(context, stage, "success")
+        log_stage_event(
+            stage=stage,
+            status="success",
+            op_name=context.op.name,
+            job_name=context.job_name,
+            run_id=context.run_id,
+            details={"final_result": _final_result},
+        )
+    except Exception as exc:
+        context.log.warning("Failed to emit pipeline completion observability: %s", exc)
+    return _final_result
+
+
 def _emit_stage(
     context,
     *,
@@ -400,6 +437,7 @@ def finalize_watermark(context, batch: Dict[str, Any]) -> str:
 
 @job
 def clickstream_pipeline_job() -> None:
+    start_pipeline_observability()
     batch = ingest_to_bronze()
     crate_cluster = validate_crate_connection()
     loaded_batch = load_raw_events_to_crate(batch, crate_cluster)
@@ -409,4 +447,5 @@ def clickstream_pipeline_job() -> None:
     supabase_batch = sync_gold_to_supabase(gold_batch)
     metabase_validated_batch = validate_metabase_api(supabase_batch)
     metabase_refreshed_batch = trigger_dashboard_refresh(metabase_validated_batch)
-    finalize_watermark(metabase_refreshed_batch)
+    final_result = finalize_watermark(metabase_refreshed_batch)
+    end_pipeline_observability(final_result)

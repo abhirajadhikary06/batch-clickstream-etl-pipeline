@@ -1,4 +1,43 @@
-/venv/
-.env
+# Python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Secrets / local env
+.env
+.env.*
+!.env.example
+
+# dbt artifacts
+dbt/target/
+dbt/logs/
+dbt_packages/
+
+# Dagster local runtime state
+orchestration/dagster_project/.dagster/
+orchestration/dagster_project/.tmp_dagster_home_*/
+orchestration/dagster_project/data/
+
+# Local pipeline data outputs
+data/bronze/
+data/checkpoints/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
