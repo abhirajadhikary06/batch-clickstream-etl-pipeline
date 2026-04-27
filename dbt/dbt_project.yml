@@ -9,7 +9,7 @@ model-paths:
 models:
   clickstream_etl:
     staging:
-      +materialized: view
+      +materialized: table
       +schema: staging
     silver:
       +materialized: incremental

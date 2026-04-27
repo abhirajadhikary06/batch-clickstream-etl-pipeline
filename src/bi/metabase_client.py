@@ -39,12 +39,28 @@ def get_metabase_settings() -> MetabaseSettings:
 
 
 def _build_auth_headers(settings: MetabaseSettings) -> dict[str, str]:
-    headers: dict[str, str] = {}
-
+    """
+    Try API key first (Metabase >=v0.46 uses 'X-Api-Key' header).
+    If the API key is absent or produces a 401, fall back to
+    username/password session authentication.
+    """
+    # --- API key path ---
     if settings.api_key:
-        headers["x-api-key"] = settings.api_key
-        return headers
+        headers = {"X-Api-Key": settings.api_key}
+        # Quick probe to verify the key is still valid before returning.
+        try:
+            probe = requests.get(
+                f"{settings.base_url}/api/user/current",
+                headers=headers,
+                timeout=settings.timeout_seconds,
+            )
+            if probe.status_code == 200:
+                return headers
+            # Key rejected — fall through to username/password below.
+        except requests.RequestException:
+            pass  # network hiccup — fall through
 
+    # --- Username / password session path ---
     if settings.username and settings.password:
         response = requests.post(
             f"{settings.base_url}/api/session",
@@ -56,14 +72,11 @@ def _build_auth_headers(settings: MetabaseSettings) -> dict[str, str]:
         session_id = data.get("id")
         if not session_id:
             raise RuntimeError("Metabase login succeeded but no session id returned")
-        headers["X-Metabase-Session"] = str(session_id)
+        return {"X-Metabase-Session": str(session_id)}
 
-    if not headers:
-        raise RuntimeError(
-            "Metabase auth is required: set METABASE_API_KEY or METABASE_USERNAME/METABASE_PASSWORD."
-        )
-
-    return headers
+    raise RuntimeError(
+        "Metabase auth is required: set METABASE_API_KEY or METABASE_USERNAME/METABASE_PASSWORD."
+    )
 
 
 def validate_metabase_api() -> str:
