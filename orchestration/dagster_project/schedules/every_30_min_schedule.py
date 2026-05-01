@@ -35,7 +35,7 @@ def _schedule_tick(context) -> RunRequest:
 
 every_30_min_schedule = ScheduleDefinition(
     job=clickstream_pipeline_job,
-    cron_schedule="*/5 * * * *",
+    cron_schedule="*/30 * * * *",
     execution_timezone="UTC",
     execution_fn=_schedule_tick,
 )
